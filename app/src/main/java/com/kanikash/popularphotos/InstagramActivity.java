@@ -1,5 +1,6 @@
 package com.kanikash.popularphotos;
 
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,11 +25,21 @@ public class InstagramActivity extends ActionBarActivity {
     public static final String CLIENT_ID = "e3d22439c075426bb5e3a2c4691efba0";
     private ArrayList<InstagramPhoto> photos;
     private InstagramPhotosAdapter aPhotos;
+    private SwipeRefreshLayout swipeContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_instagram);
+        swipeContainer = (SwipeRefreshLayout) findViewById(R.id.swipeContainer);
+
+        swipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                fetchPopularPhotos();
+            }
+        });
+
         fetchPopularPhotos();
     }
 
@@ -63,16 +74,40 @@ public class InstagramActivity extends ActionBarActivity {
                         JSONObject photoJSON = photosJson.getJSONObject(i);
                         InstagramPhoto photo = new InstagramPhoto();
                         photo.username = photoJSON.getJSONObject("user").getString("username");
+                        if(!photoJSON.getJSONObject("user").isNull("profile_picture")) {
+                            photo.userImageUrl = photoJSON.getJSONObject("user").getString("profile_picture");
+                        }
                         if(!photoJSON.isNull("caption")) {
                             photo.caption = photoJSON.getJSONObject("caption").getString("text");
                         }
                         photo.url = photoJSON.getJSONObject("images").getJSONObject("standard_resolution").getString("url");
                         photo.height = photoJSON.getJSONObject("images").getJSONObject("standard_resolution").getInt("height");
+                        photo.width = photoJSON.getJSONObject("images").getJSONObject("standard_resolution").getInt("width");
                         photo.likes_count = photoJSON.getJSONObject("likes").getInt("count");
+                        photo.photo_time = photoJSON.getInt("created_time");
+                        //Get the top two comments on the photo
+                        if(!photoJSON.getJSONObject("comments").isNull("count")) {
+                            int totalComments = photoJSON.getJSONObject("comments").getInt("count");
+                            if(totalComments > 0) {
+                                JSONArray photoCommentsJson = photoJSON.getJSONObject("comments").getJSONArray("data");
+                                if (totalComments >= 2) {
+                                    photo.comment1 = photoCommentsJson.getJSONObject(0).getString("text");
+                                    photo.comment1User = photoCommentsJson.getJSONObject(0).getJSONObject("from").getString("username");
+                                    photo.comment2 = photoCommentsJson.getJSONObject(1).getString("text");
+                                    photo.comment2User = photoCommentsJson.getJSONObject(0).getJSONObject("from").getString("username");
+                                }
+                                else if(totalComments >= 1) {
+                                    photo.comment1 = photoCommentsJson.getJSONObject(0).getString("text");
+                                    photo.comment1User = photoCommentsJson.getJSONObject(0).getJSONObject("from").getString("username");
+                                }
+                            }
+
+                        }
                         photos.add(photo);
                     }
                     //Notified the adapter that it should populate new changes in the list view
                     aPhotos.notifyDataSetChanged();
+                    swipeContainer.setRefreshing(false);
                 } catch(JSONException e) {
                     // Fire if json parsing fails
                     e.printStackTrace();

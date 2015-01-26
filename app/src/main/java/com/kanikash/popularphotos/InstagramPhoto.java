@@ -5,6 +5,7 @@ package com.kanikash.popularphotos;
  */
 public class InstagramPhoto {
     //url, height, username, caption, likes_count
-    public String username, caption, url;
-    public int likes_count, height;
+    public String username, caption, url, userImageUrl = "", comment1, comment2, comment1User, comment2User;
+    public int likes_count, height, width;
+    public int photo_time;
 }
